@@ -111,6 +111,24 @@ steps:
         from_secret: harbor_password
       insecure: true
 
+  - name: build-caddy
+    image: plugins/docker
+    settings:
+      registry:
+        from_secret: harbor_registry
+      repo:
+        from_secret: harbor_repo_caddy
+      dockerfile: caddy/Dockerfile
+      context: caddy
+      tags:
+        - latest
+        - ${DRONE_COMMIT_SHA:0:8}
+      username:
+        from_secret: harbor_username
+      password:
+        from_secret: harbor_password
+      insecure: true
+
 trigger:
   branch:
     - master
