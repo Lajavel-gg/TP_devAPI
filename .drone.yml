@@ -23,6 +23,7 @@ steps:
   - name: test-oauth2-server
     image: elixir:1.15-alpine
     commands:
+      - apk add --no-cache build-base
       - cd oauth2-server
       - mix local.hex --force
       - mix local.rebar --force
