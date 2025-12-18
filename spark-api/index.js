@@ -8,7 +8,6 @@ const axios = require('axios');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const swaggerJsdoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -76,10 +75,31 @@ Cette API nécessite un token OAuth2 valide. Utilisez le header:
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
-// Route sans redirection pour compatibilité proxy
-app.get('/api-docs/', (req, res) => {
-  res.send(swaggerUi.generateHTML(swaggerSpec, { explorer: true }));
+
+// Swagger UI avec spec inline (pas de fichiers externes)
+app.get('/api-docs', (req, res) => {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>API Statistiques - Swagger UI</title>
+        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+        <script>
+            SwaggerUIBundle({
+                spec: ${JSON.stringify(swaggerSpec)},
+                dom_id: '#swagger-ui',
+                presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+                layout: "BaseLayout"
+            });
+        </script>
+    </body>
+    </html>
+  `;
+  res.type('html').send(html);
 });
 
 // Middleware pour parser JSON

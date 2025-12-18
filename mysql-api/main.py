@@ -9,8 +9,9 @@ import httpx
 import mysql.connector
 from fastapi import FastAPI, Depends, HTTPException, Query, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+import json
 
 # Configuration
 OAUTH2_INTROSPECT_URL = os.getenv("OAUTH2_INTROSPECT_URL", "http://oauth2-server:4000/oauth/introspect")
@@ -63,8 +64,9 @@ Cette API nécessite un token OAuth2 valide. Utilisez le header:
 - `/entreprises/search` - Recherche par nom (filtre)
     """,
     version="1.0.0",
-    docs_url="/api-docs",
-    redoc_url="/redoc"
+    docs_url=None,
+    redoc_url=None,
+    openapi_url="/openapi.json"
 )
 
 app.add_middleware(
@@ -134,6 +136,32 @@ def create_paginated_response(items: list, total: int, page: int, page_size: int
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "mysql-api"}
+
+@app.get("/api-docs", response_class=HTMLResponse)
+async def swagger_ui():
+    """Swagger UI avec spec inline"""
+    openapi_spec = json.dumps(app.openapi())
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>API Entreprises SIREN - Swagger UI</title>
+        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+        <script>
+            SwaggerUIBundle({{
+                spec: {openapi_spec},
+                dom_id: '#swagger-ui',
+                presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+                layout: "BaseLayout"
+            }});
+        </script>
+    </body>
+    </html>
+    """
 
 @app.get("/entreprises/siren/{siren}")
 async def get_by_siren(siren: str, token_info: dict = Depends(validate_token)):
