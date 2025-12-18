@@ -18,7 +18,8 @@ steps:
     commands:
       - cd spark-api
       - npm install
-      - node -e "require('./index.js'); console.log('Spark API syntax OK')" || true
+      - node --check index.js
+      - echo "Spark API syntax OK"
 
   - name: test-oauth2-server
     image: elixir:1.15-alpine

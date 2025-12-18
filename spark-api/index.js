@@ -372,7 +372,7 @@ app.get('/stats/activites/:codeActivite', validateToken, async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: Pattern de filtre (ex: 62 pour tous les codes commençant par 62)
+ *         description: "Pattern de filtre (ex 62 pour tous les codes commençant par 62)"
  *       - in: query
  *         name: page
  *         schema:
