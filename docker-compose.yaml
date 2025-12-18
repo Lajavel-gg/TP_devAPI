@@ -1,6 +1,6 @@
 services:
   # ============================================
-  # 1. DATABASE - MySQL 8.0 (fourni par le prof)
+  # 1. DATABASE - MySQL 8.0 (donnees SIREN + OAuth2)
   # ============================================
   db:
     image: mysql:8.0
@@ -28,7 +28,7 @@ services:
       - siren-network
 
   # ============================================
-  # 2. INIT DATA - Télécharge et charge les données SIREN
+  # 2. INIT DATA - Telecharge et charge les donnees SIREN
   # ============================================
   init-data:
     build: ./init-data
@@ -48,7 +48,7 @@ services:
     restart: "no"
 
   # ============================================
-  # 3. SPARK CONNECT SERVER (Scala - fourni par le prof)
+  # 3. SPARK CONNECT SERVER (Scala)
   # ============================================
   spark:
     build: .
@@ -59,7 +59,6 @@ services:
         condition: service_healthy
       init-data:
         condition: service_completed_successfully
-    # Port interne uniquement (pas exposé)
     environment:
       MYSQL_HOST: db
       MYSQL_PORT: "3306"
@@ -67,34 +66,47 @@ services:
       - siren-network
 
   # ============================================
-  # 3. OAUTH2 SERVER (Python/FastAPI)
+  # 4. OAUTH2 SERVER (Elixir/Phoenix)
   # ============================================
   oauth2-server:
-    build: ./oauth2-server
+    image: elixir:1.15-alpine
     container_name: oauth2_server
+    working_dir: /app
+    command: >
+      sh -c "apk add --no-cache build-base git curl &&
+             mix local.hex --force &&
+             mix local.rebar --force &&
+             mix deps.get &&
+             mix phx.server"
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
-    # Accessible uniquement via Caddy
     environment:
+      MIX_ENV: dev
       MYSQL_HOST: db
       MYSQL_PORT: "3306"
       MYSQL_USER: sirenuser
       MYSQL_PASSWORD: "12345678"
       MYSQL_DATABASE: siren
-      SECRET_KEY: "super-secret-key-for-jwt-tokens-change-in-production"
+      SECRET_KEY_BASE: super_secret_key_base_for_production_change_this_to_64_chars_minimum
+      SECRET_KEY: super-secret-key-for-jwt-change-in-production-min-64-chars
+      PORT: "4000"
+    volumes:
+      - ./oauth2-server:/app
+      - oauth2_deps:/app/deps
+      - oauth2_build:/app/_build
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4000/health')\""]
+      test: ["CMD-SHELL", "curl -sf http://localhost:4000/health || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 15s
+      retries: 5
+      start_period: 120s
     networks:
       - siren-network
 
   # ============================================
-  # 4. MYSQL API (Python/FastAPI) - Entreprises
+  # 5. MYSQL API (Python/FastAPI) - Entreprises
   # ============================================
   mysql-api:
     build: ./mysql-api
@@ -105,7 +117,6 @@ services:
         condition: service_healthy
       oauth2-server:
         condition: service_healthy
-    # Accessible uniquement via Caddy
     environment:
       MYSQL_HOST: db
       MYSQL_PORT: "3306"
@@ -125,7 +136,7 @@ services:
       - siren-network
 
   # ============================================
-  # 5. SPARK API (Node.js/Express) - Statistiques
+  # 6. SPARK API (Node.js/Express) - Statistiques
   # ============================================
   spark-api:
     build: ./spark-api
@@ -134,7 +145,6 @@ services:
     depends_on:
       - spark
       - oauth2-server
-    # Accessible uniquement via Caddy
     environment:
       PORT: "3002"
       SPARK_CONNECT_HOST: spark
@@ -152,7 +162,7 @@ services:
       - siren-network
 
   # ============================================
-  # 6. CADDY - Reverse Proxy avec TLS
+  # 7. CADDY - Reverse Proxy avec TLS
   # ============================================
   caddy:
     image: caddy:2-alpine
@@ -174,6 +184,8 @@ services:
 
 volumes:
   db_data:
+  oauth2_deps:
+  oauth2_build:
   caddy_data:
   caddy_config:
 
