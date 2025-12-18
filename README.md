@@ -13,7 +13,7 @@ Architecture de services conteneurisée pour l'accès aux données des entrepris
             ▼                   ▼                   ▼
 ┌───────────────────┐ ┌───────────────────┐ ┌───────────────────┐
 │   OAuth2 Server   │ │    MySQL API      │ │    Spark API      │
-│  Python/FastAPI   │ │  Python/FastAPI   │ │  Node.js/Express  │
+│  Elixir/Phoenix   │ │  Python/FastAPI   │ │  Node.js/Express  │
 │     Port 4000     │ │     Port 3001     │ │     Port 3002     │
 └───────────────────┘ └─────────┬─────────┘ └─────────┬─────────┘
             │                   │                     │
@@ -29,7 +29,7 @@ Architecture de services conteneurisée pour l'accès aux données des entrepris
 
 | Service | Technologie | Description |
 |---------|-------------|-------------|
-| `oauth2-server` | Python/FastAPI | Serveur OAuth2 (client_credentials, introspection) |
+| `oauth2-server` | Elixir/Phoenix | Serveur OAuth2 (client_credentials, introspection) |
 | `mysql-api` | Python/FastAPI | API REST entreprises (SIREN, nom, activite) |
 | `spark-api` | Node.js/Express | API REST statistiques via Spark Connect |
 | `caddy` | Go | Reverse proxy HTTPS avec TLS |
@@ -189,9 +189,9 @@ devAPI/
 │   ├── Caddyfile            # Configuration reverse proxy
 │   └── certs/               # Certificats TLS auto-generes
 ├── oauth2-server/
-│   ├── Dockerfile
-│   ├── main.py              # Serveur OAuth2 FastAPI
-│   └── requirements.txt
+│   ├── mix.exs              # Dependances Elixir
+│   ├── config/              # Configuration Phoenix
+│   └── lib/                 # Code OAuth2 Elixir/Phoenix
 ├── mysql-api/
 │   ├── Dockerfile
 │   ├── main.py              # API Entreprises FastAPI
