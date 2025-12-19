@@ -109,7 +109,7 @@ steps:
       - mix local.rebar --force
       - mix deps.get
       - mix compile
-      - echo "OAuth2 Server validation: PASSED"
+      - echo "OAuth2 Server validation PASSED"
     depends_on:
       - unit-test-oauth2-server
 
@@ -152,7 +152,7 @@ steps:
         JSONEOF
       - cat /reports/test-report.json
       - cp /reports/test-report.json .
-      - echo "Rapport genere: test-report.json"
+      - echo "Rapport genere - test-report.json"
     depends_on:
       - validate-mysql-api-build
       - validate-spark-api-build
