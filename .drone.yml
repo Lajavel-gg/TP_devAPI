@@ -114,86 +114,45 @@ steps:
       - unit-test-oauth2-server
 
   # ============================================
-  # STAGE 3: GENERATION RAPPORT DE TESTS
+  # STAGE 3: GENERATION RAPPORT COMPLET
   # ============================================
 
-  - name: generate-test-report
-    image: alpine:latest
-    volumes:
-      - name: reports
-        path: /reports
+  - name: generate-reports
+    image: pandoc/latex:latest
+    environment:
+      DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
+      DRONE_BRANCH: ${DRONE_BRANCH}
+      DRONE_COMMIT_SHA: ${DRONE_COMMIT_SHA}
+      DRONE_COMMIT_AUTHOR: ${DRONE_COMMIT_AUTHOR}
+      DRONE_REPO: ${DRONE_REPO}
     commands:
-      - apk add --no-cache jq
-      - echo "=== Generation du rapport de tests ==="
+      - echo "=== Generation des rapports ==="
+      - apk add --no-cache bash
+      - chmod +x tests/generate-report.sh
+      - bash tests/generate-report.sh
+      - ls -la test-report.*
+      - echo "=== Generation PDF ==="
       - |
-        cat > /reports/test-report.json << 'JSONEOF'
-        {
-          "metadata": {
-            "timestamp": "$(date -Iseconds)",
-            "pipeline": "ci-cd-pipeline",
-            "version": "1.0.0"
-          },
-          "summary": {
-            "total": 6,
-            "passed": 6,
-            "failed": 0,
-            "skipped": 0,
-            "success_rate": 100
-          },
-          "tests": [
-            {"name": "unit-test-mysql-api", "status": "PASSED", "type": "unit"},
-            {"name": "unit-test-spark-api", "status": "PASSED", "type": "unit"},
-            {"name": "unit-test-oauth2-server", "status": "PASSED", "type": "unit"},
-            {"name": "validate-mysql-api-build", "status": "PASSED", "type": "integration"},
-            {"name": "validate-spark-api-build", "status": "PASSED", "type": "integration"},
-            {"name": "validate-oauth2-build", "status": "PASSED", "type": "integration"}
-          ]
-        }
-        JSONEOF
-      - cat /reports/test-report.json
-      - cp /reports/test-report.json .
-      - echo "Rapport genere - test-report.json"
+        pandoc test-report.md \
+          -o test-report.pdf \
+          --pdf-engine=xelatex \
+          --toc \
+          -V geometry:margin=2cm \
+          -V fontsize=11pt \
+          -V colorlinks=true \
+          -V linkcolor=blue \
+          --highlight-style=tango \
+          || echo "PDF avec options reduites..."
+      - |
+        if [ ! -f test-report.pdf ]; then
+          pandoc test-report.md -o test-report.pdf --pdf-engine=xelatex || true
+        fi
+      - ls -la test-report.*
+      - echo "Rapports generes avec succes"
     depends_on:
       - validate-mysql-api-build
       - validate-spark-api-build
       - validate-oauth2-build
-
-  # ============================================
-  # STAGE 3: GENERATION RAPPORT PDF
-  # ============================================
-
-  - name: generate-pdf-report
-    image: pandoc/latex:latest
-    volumes:
-      - name: reports
-        path: /reports
-    commands:
-      - echo "=== Generation du rapport PDF ==="
-      - apk add --no-cache jq || true
-      - |
-        if [ -f "test-report.json" ]; then
-          cat test-report.json | jq -r '
-            "# Rapport de Tests API SIREN\n\n" +
-            "**Date:** " + .metadata.timestamp + "\n\n" +
-            "## Resume\n\n" +
-            "| Metrique | Valeur |\n" +
-            "|----------|--------|\n" +
-            "| Total | " + (.summary.total | tostring) + " |\n" +
-            "| Reussis | " + (.summary.passed | tostring) + " |\n" +
-            "| Echoues | " + (.summary.failed | tostring) + " |\n" +
-            "| Taux de reussite | " + (.summary.success_rate | tostring) + "% |\n\n" +
-            "## Details des Tests\n\n" +
-            (.tests | map("- **" + .name + "**: " + .status + " (" + .type + ")") | join("\n"))
-          ' > test-report.md
-          cat test-report.md
-          pandoc test-report.md -o test-report.pdf --pdf-engine=xelatex -V geometry:margin=1in || echo "PDF generation skipped"
-        else
-          echo "# Rapport de Tests\n\nTous les tests ont reussi." > test-report.md
-          pandoc test-report.md -o test-report.pdf --pdf-engine=xelatex || true
-        fi
-      - ls -la *.pdf *.md 2>/dev/null || echo "Reports generated"
-    depends_on:
-      - generate-test-report
     when:
       status:
         - success
@@ -239,7 +198,7 @@ steps:
           ls -la
         fi
     depends_on:
-      - generate-pdf-report
+      - generate-reports
     when:
       status:
         - success
