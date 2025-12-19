@@ -27,23 +27,7 @@ geometry: margin=2cm
 fontsize: 11pt
 colorlinks: true
 linkcolor: blue
-toc: true
-toc-depth: 2
-header-includes:
-  - \usepackage{fancyhdr}
-  - \usepackage{lastpage}
-  - \usepackage{xcolor}
-  - \usepackage{tcolorbox}
-  - \pagestyle{fancy}
-  - \fancyhead[L]{Rapport CI/CD - API SIREN}
-  - \fancyhead[R]{\thepage/\pageref{LastPage}}
-  - \fancyfoot[C]{Build BUILD_NUMBER_PLACEHOLDER}
-  - \definecolor{pass}{RGB}{34, 197, 94}
-  - \definecolor{fail}{RGB}{239, 68, 68}
-  - \definecolor{warn}{RGB}{245, 158, 11}
 ---
-
-\newpage
 
 # Resume Executif
 
@@ -62,9 +46,7 @@ Ce rapport presente les resultats des tests automatises executes par le pipeline
 
 ## Resultats Globaux
 
-\begin{tcolorbox}[colback=green!5!white,colframe=green!75!black,title=Statut Global]
-\textbf{TOUS LES TESTS ONT REUSSI}
-\end{tcolorbox}
+**TOUS LES TESTS ONT REUSSI**
 
 | Metrique | Valeur |
 |----------|--------|
@@ -73,7 +55,7 @@ Ce rapport presente les resultats des tests automatises executes par le pipeline
 | Tests Echoues | **0** |
 | Taux de Reussite | **100%** |
 
-\newpage
+---
 
 # Details des Tests
 
@@ -85,7 +67,7 @@ Les tests unitaires verifient que chaque composant fonctionne correctement de ma
 
 | Propriete | Valeur |
 |-----------|--------|
-| **Statut** | $\color{pass}\textbf{PASSED}$ |
+| **Statut** | ✅ PASSED |
 | **Langage** | Python 3.11 |
 | **Framework** | FastAPI |
 | **Type** | Test unitaire |
@@ -101,7 +83,7 @@ Les tests unitaires verifient que chaque composant fonctionne correctement de ma
 
 | Propriete | Valeur |
 |-----------|--------|
-| **Statut** | $\color{pass}\textbf{PASSED}$ |
+| **Statut** | ✅ PASSED |
 | **Langage** | Node.js 20 |
 | **Framework** | Express.js |
 | **Type** | Test unitaire |
@@ -116,7 +98,7 @@ Les tests unitaires verifient que chaque composant fonctionne correctement de ma
 
 | Propriete | Valeur |
 |-----------|--------|
-| **Statut** | $\color{pass}\textbf{PASSED}$ |
+| **Statut** | ✅ PASSED |
 | **Langage** | Elixir 1.15 |
 | **Framework** | Phoenix |
 | **Type** | Test unitaire |
@@ -127,7 +109,7 @@ Les tests unitaires verifient que chaque composant fonctionne correctement de ma
 - Compilation du projet
 - Verification des warnings
 
-\newpage
+---
 
 ## Tests de Validation
 
@@ -137,7 +119,7 @@ Les tests de validation verifient que les builds sont fonctionnels.
 
 | Propriete | Valeur |
 |-----------|--------|
-| **Statut** | $\color{pass}\textbf{PASSED}$ |
+| **Statut** | ✅ PASSED |
 | **Type** | Test d'integration |
 
 **Verifications effectuees:**
@@ -150,7 +132,7 @@ Les tests de validation verifient que les builds sont fonctionnels.
 
 | Propriete | Valeur |
 |-----------|--------|
-| **Statut** | $\color{pass}\textbf{PASSED}$ |
+| **Statut** | ✅ PASSED |
 | **Type** | Test d'integration |
 
 **Verifications effectuees:**
@@ -163,7 +145,7 @@ Les tests de validation verifient que les builds sont fonctionnels.
 
 | Propriete | Valeur |
 |-----------|--------|
-| **Statut** | $\color{pass}\textbf{PASSED}$ |
+| **Statut** | ✅ PASSED |
 | **Type** | Test d'integration |
 
 **Verifications effectuees:**
@@ -172,7 +154,7 @@ Les tests de validation verifient que les builds sont fonctionnels.
 - Dependances resolues
 - Application Phoenix fonctionnelle
 
-\newpage
+---
 
 # Qualite du Code
 
@@ -187,7 +169,7 @@ Les Dockerfiles ont ete analyses avec Hadolint pour verifier les bonnes pratique
 | `oauth2-server/Dockerfile` | OK | Conforme |
 | `caddy/Dockerfile` | OK | Conforme |
 
-\newpage
+---
 
 # Images Docker
 
@@ -201,7 +183,7 @@ Les images suivantes ont ete construites et poussees vers Harbor:
 | `spark-server` | `latest`, `BUILD_NUMBER_PLACEHOLDER` | Harbor |
 | `caddy` | `latest`, `BUILD_NUMBER_PLACEHOLDER` | Harbor |
 
-\newpage
+---
 
 # Architecture Testee
 
@@ -226,7 +208,7 @@ Les images suivantes ont ete construites et poussees vers Harbor:
                      +----------------+  +----------------+
 ```
 
-\newpage
+---
 
 # Conclusion
 
