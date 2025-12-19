@@ -217,7 +217,7 @@ steps:
       - ls -la *.pdf *.json *.md 2>/dev/null || echo "Fichiers disponibles"
       - |
         echo "Login Harbor..."
-        oras login $${HARBOR_REGISTRY} -u $${HARBOR_USER} -p $${HARBOR_PASS} --insecure
+        oras login $${HARBOR_REGISTRY} -u $${HARBOR_USER} -p $${HARBOR_PASS} --insecure --plain-http
       - |
         echo "Push des rapports..."
         if [ -f "test-report.pdf" ] && [ -f "test-report.json" ]; then
@@ -225,12 +225,12 @@ steps:
             test-report.pdf:application/pdf \
             test-report.json:application/json \
             test-report.md:text/markdown \
-            --insecure
+            --plain-http
           oras push $${HARBOR_REGISTRY}/reports/ci-reports:latest \
             test-report.pdf:application/pdf \
             test-report.json:application/json \
             test-report.md:text/markdown \
-            --insecure
+            --plain-http
           echo "Rapports uploades avec succes"
           echo "  - $${HARBOR_REGISTRY}/reports/ci-reports:build-${DRONE_BUILD_NUMBER}"
           echo "  - $${HARBOR_REGISTRY}/reports/ci-reports:latest"
