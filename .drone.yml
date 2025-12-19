@@ -379,17 +379,12 @@ steps:
       - echo "     PIPELINE CI/CD TERMINE AVEC SUCCES"
       - echo "=========================================="
       - echo ""
-      - echo "Commit  : ${DRONE_COMMIT_SHA:0:8}"
-      - echo "Branch  : ${DRONE_BRANCH}"
-      - echo "Build   : ${DRONE_BUILD_NUMBER}"
-      - echo "Author  : ${DRONE_COMMIT_AUTHOR}"
+      - echo "Commit  :" $${DRONE_COMMIT_SHA}
+      - echo "Branch  :" $${DRONE_BRANCH}
+      - echo "Build   :" $${DRONE_BUILD_NUMBER}
+      - echo "Author  :" $${DRONE_COMMIT_AUTHOR}
       - echo ""
-      - echo "Images poussees vers Harbor:"
-      - echo "  - mysql-api:${DRONE_COMMIT_SHA:0:8}"
-      - echo "  - spark-api:${DRONE_COMMIT_SHA:0:8}"
-      - echo "  - oauth2-server:${DRONE_COMMIT_SHA:0:8}"
-      - echo "  - spark-server:${DRONE_COMMIT_SHA:0:8}"
-      - echo "  - caddy:${DRONE_COMMIT_SHA:0:8}"
+      - echo "Images poussees vers Harbor (tag latest)"
       - echo ""
       - echo "=========================================="
     depends_on:
@@ -409,9 +404,9 @@ steps:
       - echo "     PIPELINE CI/CD ECHOUE"
       - echo "=========================================="
       - echo ""
-      - echo "Commit  : ${DRONE_COMMIT_SHA:0:8}"
-      - echo "Branch  : ${DRONE_BRANCH}"
-      - echo "Build   : ${DRONE_BUILD_NUMBER}"
+      - echo "Commit  :" $${DRONE_COMMIT_SHA}
+      - echo "Branch  :" $${DRONE_BRANCH}
+      - echo "Build   :" $${DRONE_BUILD_NUMBER}
       - echo ""
       - echo "Verifiez les logs pour identifier l'erreur"
       - echo "=========================================="
