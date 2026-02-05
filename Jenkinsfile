@@ -1,0 +1,169 @@
+pipeline {
+    agent any
+
+    options {
+        timeout(time: 15, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        timestamps()
+    }
+
+    environment {
+        DOKPLOY_URL = 'http://192.168.0.103:3000'
+        DOKPLOY_TOKEN = 'CMP_fcdf0ce662f5dbde70db'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                cleanWs()
+                git branch: 'main', url: 'git@github.com:Lajavel-gg/TP_devAPI.git'
+                script {
+                    env.GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                    env.GIT_AUTHOR = sh(script: 'git log -1 --format=%an', returnStdout: true).trim()
+                    env.GIT_MESSAGE = sh(script: 'git log -1 --format=%s', returnStdout: true).trim()
+                }
+                sh 'echo "Commit: ${GIT_COMMIT_SHORT} | Author: ${GIT_AUTHOR}"'
+            }
+        }
+
+        stage('Code Quality') {
+            parallel {
+                stage('Python') {
+                    steps {
+                        script {
+                            try {
+                                sh 'python3 -m py_compile mysql-api/main.py'
+                                env.PYTHON_STATUS = 'passed'
+                            } catch (e) {
+                                env.PYTHON_STATUS = 'failed'
+                                throw e
+                            }
+                        }
+                    }
+                }
+                stage('JavaScript') {
+                    steps {
+                        script {
+                            try {
+                                sh 'node --check spark-api/index.js'
+                                env.JS_STATUS = 'passed'
+                            } catch (e) {
+                                env.JS_STATUS = 'failed'
+                                throw e
+                            }
+                        }
+                    }
+                }
+                stage('Elixir Tests') {
+                    steps {
+                        script {
+                            try {
+                                // Run ExUnit tests (no DB needed - OAuth clients are in-memory)
+                                sh '''
+                                    docker run --rm \
+                                        -v "${WORKSPACE}/oauth2-server:/app" \
+                                        -w /app \
+                                        -e MIX_ENV=test \
+                                        elixir:1.15-alpine \
+                                        sh -c "apk add --no-cache build-base git && \
+                                               mix local.hex --force && \
+                                               mix local.rebar --force && \
+                                               mix deps.get && \
+                                               mix test --color"
+                                '''
+                                env.ELIXIR_STATUS = 'passed'
+                            } catch (e) {
+                                env.ELIXIR_STATUS = 'failed'
+                                throw e
+                            }
+                        }
+                    }
+                }
+                stage('YAML') {
+                    steps {
+                        script {
+                            try {
+                                sh "python3 -c \"import yaml; yaml.safe_load(open('docker-compose.yaml'))\""
+                                env.YAML_STATUS = 'passed'
+                            } catch (e) {
+                                env.YAML_STATUS = 'failed'
+                                throw e
+                            }
+                        }
+                    }
+                }
+                stage('Dockerfiles') {
+                    steps {
+                        script {
+                            try {
+                                sh 'grep -q "^FROM" mysql-api/Dockerfile && grep -q "^FROM" spark-api/Dockerfile'
+                                env.DOCKER_STATUS = 'passed'
+                            } catch (e) {
+                                env.DOCKER_STATUS = 'failed'
+                                throw e
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Security') {
+            steps {
+                script {
+                    def issues = sh(script: 'grep -rn "password.*=.*[0-9]" --include="*.py" --include="*.js" . 2>/dev/null || true', returnStdout: true).trim()
+                    env.SECURITY_STATUS = issues ? 'warning' : 'passed'
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                writeFile file: 'payload.json', text: '{"ref":"refs/heads/main","repository":{"full_name":"Lajavel-gg/TP_devAPI"}}'
+                script {
+                    def response = sh(script: 'curl -s -w "\n%{http_code}" -X POST -H "Content-Type: application/json" -H "X-GitHub-Event: push" -d @payload.json ${DOKPLOY_URL}/api/deploy/compose/${DOKPLOY_TOKEN}', returnStdout: true).trim()
+                    def httpCode = response.split('\n')[-1]
+                    if (httpCode == '200') {
+                        env.DEPLOY_STATUS = 'passed'
+                    } else {
+                        env.DEPLOY_STATUS = 'failed'
+                        error "Deployment failed"
+                    }
+                }
+            }
+        }
+
+        stage('Report') {
+            steps {
+                script {
+                    def reportName = "build-report-${BUILD_NUMBER}.pdf"
+                    sh """
+                        export GIT_COMMIT='${env.GIT_COMMIT_SHORT}'
+                        export GIT_AUTHOR='${env.GIT_AUTHOR}'
+                        export GIT_MESSAGE='${env.GIT_MESSAGE}'
+                        export REPORT_PATH='${reportName}'
+                        python3 /var/lib/jenkins/generate_report.py ${env.PYTHON_STATUS ?: 'passed'} ${env.JS_STATUS ?: 'passed'} ${env.ELIXIR_STATUS ?: 'passed'} ${env.YAML_STATUS ?: 'passed'} ${env.DOCKER_STATUS ?: 'passed'} ${env.SECURITY_STATUS ?: 'passed'} ${env.DEPLOY_STATUS ?: 'passed'}
+                    """
+                    archiveArtifacts artifacts: reportName, fingerprint: true
+                    echo "PDF Report: ${reportName}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '=========================================='
+            echo '  BUILD SUCCESS - PDF Report Generated'
+            echo '=========================================='
+        }
+        failure {
+            echo '=========================================='
+            echo '  BUILD FAILED - Check logs'
+            echo '=========================================='
+        }
+        always {
+            cleanWs(cleanWhenNotBuilt: false, deleteDirs: true, disableDeferredWipeout: true, patterns: [[pattern: '*.pdf', type: 'EXCLUDE']])
+        }
+    }
+}
