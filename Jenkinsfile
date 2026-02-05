@@ -16,7 +16,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 cleanWs()
-                git branch: 'main', url: 'git@github.com:Lajavel-gg/TP_devAPI.git'
+                git branch: 'main', url: 'https://github.com/Lajavel-gg/TP_devAPI.git'
                 script {
                     env.GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     env.GIT_AUTHOR = sh(script: 'git log -1 --format=%an', returnStdout: true).trim()
@@ -55,26 +55,31 @@ pipeline {
                     }
                 }
                 stage('Elixir Tests') {
+                    agent {
+                        docker {
+                            image 'elixir:1.15-alpine'
+                            args '-u root'
+                            reuseNode true
+                        }
+                    }
                     steps {
                         script {
                             try {
-                                // Run ExUnit tests (no DB needed - OAuth clients are in-memory)
                                 sh '''
-                                    docker run --rm \
-                                        -v "${WORKSPACE}/oauth2-server:/app" \
-                                        -w /app \
-                                        -e MIX_ENV=test \
-                                        elixir:1.15-alpine \
-                                        sh -c "apk add --no-cache build-base git && \
-                                               mix local.hex --force && \
-                                               mix local.rebar --force && \
-                                               mix deps.get && \
-                                               mix test --color"
+                                    apk add --no-cache build-base git
+                                    cd oauth2-server
+                                    mix local.hex --force
+                                    mix local.rebar --force
+                                    mix deps.get
+                                    MIX_ENV=test mix test --color
                                 '''
                                 env.ELIXIR_STATUS = 'passed'
                             } catch (e) {
                                 env.ELIXIR_STATUS = 'failed'
                                 throw e
+                            } finally {
+                                // Clean build artifacts to fix permission issues
+                                sh 'rm -rf oauth2-server/_build oauth2-server/deps || true'
                             }
                         }
                     }
@@ -136,16 +141,28 @@ pipeline {
         stage('Report') {
             steps {
                 script {
-                    def reportName = "build-report-${BUILD_NUMBER}.pdf"
-                    sh """
-                        export GIT_COMMIT='${env.GIT_COMMIT_SHORT}'
-                        export GIT_AUTHOR='${env.GIT_AUTHOR}'
-                        export GIT_MESSAGE='${env.GIT_MESSAGE}'
-                        export REPORT_PATH='${reportName}'
-                        python3 /var/lib/jenkins/generate_report.py ${env.PYTHON_STATUS ?: 'passed'} ${env.JS_STATUS ?: 'passed'} ${env.ELIXIR_STATUS ?: 'passed'} ${env.YAML_STATUS ?: 'passed'} ${env.DOCKER_STATUS ?: 'passed'} ${env.SECURITY_STATUS ?: 'passed'} ${env.DEPLOY_STATUS ?: 'passed'}
-                    """
+                    def reportName = "build-report-${BUILD_NUMBER}.txt"
+                    def status = """
+Build Report #${BUILD_NUMBER}
+========================================
+Date: ${new Date().format('yyyy-MM-dd HH:mm:ss')}
+Commit: ${env.GIT_COMMIT_SHORT}
+Author: ${env.GIT_AUTHOR}
+Message: ${env.GIT_MESSAGE}
+
+Test Results:
+- Python:      ${env.PYTHON_STATUS ?: 'passed'}
+- JavaScript:  ${env.JS_STATUS ?: 'passed'}
+- Elixir:      ${env.ELIXIR_STATUS ?: 'passed'}
+- YAML:        ${env.YAML_STATUS ?: 'passed'}
+- Dockerfiles: ${env.DOCKER_STATUS ?: 'passed'}
+- Security:    ${env.SECURITY_STATUS ?: 'passed'}
+- Deploy:      ${env.DEPLOY_STATUS ?: 'passed'}
+========================================
+"""
+                    writeFile file: reportName, text: status
                     archiveArtifacts artifacts: reportName, fingerprint: true
-                    echo "PDF Report: ${reportName}"
+                    echo status
                 }
             }
         }
@@ -163,7 +180,7 @@ pipeline {
             echo '=========================================='
         }
         always {
-            cleanWs(cleanWhenNotBuilt: false, deleteDirs: true, disableDeferredWipeout: true, patterns: [[pattern: '*.pdf', type: 'EXCLUDE']])
+            cleanWs(cleanWhenNotBuilt: false, deleteDirs: true, disableDeferredWipeout: true, notFailBuild: true)
         }
     }
 }
