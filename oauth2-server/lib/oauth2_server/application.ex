@@ -3,10 +3,13 @@ defmodule Oauth2Server.Application do
 
   use Application
 
+  # Capture env at compile time (Mix is not available at runtime in releases)
+  @env Mix.env()
+
   @impl true
   def start(_type, _args) do
     children =
-      if Mix.env() == :test do
+      if @env == :test do
         # Don't start Repo in test - OAuth clients are in-memory
         [
           {Phoenix.PubSub, name: Oauth2Server.PubSub},
