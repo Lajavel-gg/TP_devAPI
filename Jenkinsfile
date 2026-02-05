@@ -16,7 +16,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 cleanWs()
-                git branch: 'main', url: 'git@github.com:Lajavel-gg/TP_devAPI.git'
+                git branch: 'main', url: 'https://github.com/Lajavel-gg/TP_devAPI.git'
                 script {
                     env.GIT_COMMIT_SHORT = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
                     env.GIT_AUTHOR = sh(script: 'git log -1 --format=%an', returnStdout: true).trim()
@@ -55,21 +55,22 @@ pipeline {
                     }
                 }
                 stage('Elixir Tests') {
+                    agent {
+                        docker {
+                            image 'elixir:1.15-alpine'
+                            args '-u root'
+                        }
+                    }
                     steps {
                         script {
                             try {
-                                // Run ExUnit tests (no DB needed - OAuth clients are in-memory)
                                 sh '''
-                                    docker run --rm \
-                                        -v "${WORKSPACE}/oauth2-server:/app" \
-                                        -w /app \
-                                        -e MIX_ENV=test \
-                                        elixir:1.15-alpine \
-                                        sh -c "apk add --no-cache build-base git && \
-                                               mix local.hex --force && \
-                                               mix local.rebar --force && \
-                                               mix deps.get && \
-                                               mix test --color"
+                                    apk add --no-cache build-base git
+                                    cd oauth2-server
+                                    mix local.hex --force
+                                    mix local.rebar --force
+                                    mix deps.get
+                                    mix test --color
                                 '''
                                 env.ELIXIR_STATUS = 'passed'
                             } catch (e) {
